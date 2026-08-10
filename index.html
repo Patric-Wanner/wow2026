@@ -336,7 +336,7 @@ function statusOf(s){
 
 /* ---------- audio player (topp-3-medley, ~7 sek per låt) ---------- */
 const audio=$('#audio'); let curPlay=null, curSet=null, medley=[], medIdx=0;
-const CLIP=7; // sekunder per låt i medley
+const CLIP=10; // sekunder per låt i medley
 function clipsOf(s){ return (s.top3&&s.top3.length)?s.top3 : (s.preview?[{track:s.track,preview:s.preview,art:s.art}]:[]); }
 function updPMeta(){
   const c=medley[medIdx]||{};
