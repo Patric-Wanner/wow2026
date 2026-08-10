@@ -101,8 +101,14 @@ main{padding:6px 14px 24px}
 .clash{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(180deg,rgba(255,120,60,.12),rgba(255,120,60,.05));border:1px solid rgba(255,140,80,.35);color:#ffc7a6;border-radius:14px;padding:12px 14px;margin:8px 2px 14px;font-size:13px;line-height:1.5}
 
 /* ---------- Map (clickable image) ---------- */
-.mapimg-wrap{position:relative;margin:8px 0 10px;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 12px 34px -14px rgba(0,0,0,.85);line-height:0}
+.mapouter{position:relative;margin:8px 0 10px}
+.mapimg-wrap{position:relative;border-radius:18px;overflow:auto;border:1px solid var(--line);box-shadow:0 12px 34px -14px rgba(0,0,0,.85);line-height:0;-webkit-overflow-scrolling:touch}
+.mapzoom{width:100%;transform-origin:0 0;transition:transform .18s}
 .mapimg{width:100%;display:block}
+.zoomctrl{position:absolute;right:10px;bottom:12px;display:flex;gap:6px;z-index:6}
+.zoombtn{min-width:38px;height:38px;padding:0 10px;border-radius:11px;border:1px solid var(--line2);background:rgba(8,9,13,.55);backdrop-filter:blur(8px);color:var(--ink);font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.72;transition:.12s}
+.zoombtn.wide{font-family:var(--disp);font-size:13px;letter-spacing:.03em}
+.zoombtn:active{opacity:1;transform:scale(.94)}
 .hot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:5px;background:none;border:none;padding:0;cursor:pointer}
 .hot::before{content:"";width:46px;height:46px;border-radius:50%;border:3px solid var(--sc);background:radial-gradient(circle,color-mix(in srgb,var(--sc) 22%,transparent),transparent 70%);box-shadow:0 0 22px var(--sc),0 0 8px var(--sc),0 2px 6px #000a;transition:.15s}
 .hot:active::before{transform:scale(.92)}
@@ -322,7 +328,7 @@ const hhmm = m => String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%6
 /* ---------- state ---------- */
 let FAV = new Set(JSON.parse(localStorage.getItem('wow26_favs')||'[]'));
 const saveFav = ()=>localStorage.setItem('wow26_favs',JSON.stringify([...FAV]));
-let state = { day:0, view:'schema', stageFilter:'all', q:'', favOnly:false, mapStage:null, layout:'list' };
+let state = { day:0, view:'schema', stageFilter:'all', q:'', favOnly:false, mapStage:null, layout:'list', mapZoom:1 };
 // default day: if festival is running, jump to today
 (function initDay(){ const t=new Date(); const iso=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); const i=DAYS.findIndex(d=>d.date===iso); if(i>=0) state.day=i; })();
 // återställ senast valda flik/dag/vy vid omladdning
@@ -760,14 +766,23 @@ function viewKarta(){
   const legend = STAGE_ORDER.map(st=>`<span class="chip ${state.mapStage===st?'active':''}" data-mapstage="${st}" style="color:${STAGES[st].hex}"><span class="dot" style="background:${STAGES[st].hex}"></span>${st}</span>`).join('');
   const hots = STAGE_ORDER.map(st=>{const p=MAPHOT[st];const t=firstStart(st,state.day);return `<button class="hot ${state.mapStage===st?'sel':''}" data-mapstage="${st}" style="left:${p.x}%;top:${p.y}%;--sc:${STAGES[st].hex}" aria-label="${st}"><span class="hlbl">${st}${t?` <b>${t}</b>`:''}</span></button>`;}).join('');
   return `<div class="filters" style="padding-top:6px"><div class="chips">${legend}</div></div>
-    <div class="mapimg-wrap">
-      <img class="mapimg" src="${MAPIMG}" alt="Way Out West – officiell karta över Slottsskogen">
-      ${hots}
+    <div class="mapouter">
+      <div class="mapimg-wrap" id="mapwrap">
+        <div class="mapzoom" id="mapzoom" style="transform:scale(${state.mapZoom||1})">
+          <img class="mapimg" src="${MAPIMG}" alt="Way Out West – officiell karta över Slottsskogen">
+          ${hots}
+        </div>
+      </div>
+      <div class="zoomctrl">
+        <button class="zoombtn" data-zoom="out" aria-label="Zooma ut">−</button>
+        <button class="zoombtn" data-zoom="in" aria-label="Zooma in">+</button>
+        <button class="zoombtn wide" data-zoom="fit">Hela</button>
+      </div>
     </div>
     <div class="mapbtns">
       <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=57.6896,11.9527" target="_blank" rel="noopener">🧭 Hitta hit · Linnéplatsen</a>
     </div>
-    <div class="maphint">Officiell områdeskarta från wayoutwest.se. Tryck på en <b>scen</b> för dagens lineup.</div>
+    <div class="maphint">Officiell områdeskarta från wayoutwest.se. Tryck på en <b>scen</b> för dagens lineup, eller zooma med knapparna.</div>
     <div id="stagePanel">${stagePanelHTML()}</div>`;
 }
 function selectStage(st){
@@ -786,6 +801,11 @@ function bind(){
   document.querySelectorAll('[data-fav]').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleFav(b.dataset.fav);});
   document.querySelectorAll('[data-play]').forEach(b=>b.onclick=e=>{e.stopPropagation();const s=SETS.find(x=>idOf(x)===b.dataset.play);if(s)playSet(s);});
   document.querySelectorAll('[data-mapstage]').forEach(b=>b.onclick=()=>selectStage(b.dataset.mapstage));
+  document.querySelectorAll('[data-zoom]').forEach(b=>b.onclick=()=>{
+    const z=state.mapZoom||1;
+    state.mapZoom = b.dataset.zoom==='in'?Math.min(z+0.6,3) : b.dataset.zoom==='out'?Math.max(z-0.6,1) : 1;
+    const mz=$('#mapzoom'); if(mz) mz.style.transform='scale('+state.mapZoom+')';
+  });
   const cb=$('#calbtn'); if(cb)cb.onclick=()=>downloadICS(state.day);
   document.querySelectorAll('[data-layout]').forEach(b=>b.onclick=()=>{state.layout=b.dataset.layout;render();});
 }
