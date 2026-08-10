@@ -335,7 +335,7 @@ function statusOf(s){
 }
 
 /* ---------- audio player: topp-3-medley med Spotify-liknande crossfade ---------- */
-const CLIP=15, FADE=2;                 // sek per låt, sek crossfade (equal-power, Spotify-likt)
+const CLIP=14, FADE=4;                 // sek per låt, sek crossfade (equal-power, Spotify-likt)
 const AP=[new Audio(), new Audio()]; AP.forEach(a=>a.preload='auto');
 let curPlay=null, curSet=null, medley=[], medIdx=0, act=0, fading=false, fadeTimer=null;
 const A=()=>AP[act], other=()=>AP[act^1];
