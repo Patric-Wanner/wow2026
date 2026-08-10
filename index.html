@@ -176,6 +176,15 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) +
 .gbt{font-size:10px;font-weight:800;opacity:.9;font-variant-numeric:tabular-nums}
 .gbn{font-size:12px;font-weight:800;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
 .gnow{position:absolute;left:0;right:0;height:2px;background:var(--neon);box-shadow:0 0 8px var(--neon-glow);z-index:1}
+
+/* ---------- Praktiskt / Info ---------- */
+.infocard{background:linear-gradient(180deg,var(--card),#101019);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:11px}
+.infocard h3{font-family:var(--disp);font-size:18px;letter-spacing:.02em;margin-bottom:10px}
+.irow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.irow:last-of-type{border-bottom:0}
+.irow b{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.isub{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:8px}
+.infocard .btn{width:100%}
 </style>
 </head>
 <body>
@@ -201,6 +210,7 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) +
   <button class="navbtn" data-view="nu"><span class="ic">🔴</span>Nu</button>
   <button class="navbtn" data-view="karta"><span class="ic">🗺️</span>Karta</button>
   <button class="navbtn" data-view="mitt"><span class="ic">⭐</span>Mitt</button>
+  <button class="navbtn" data-view="info"><span class="ic">ℹ️</span>Info</button>
 </nav>
 
 <audio id="audio" preload="none"></audio>
@@ -361,6 +371,7 @@ function render(){
   const m=$('#main');
   if(state.view==='schema') m.innerHTML=viewSchema();
   else if(state.view==='nu') m.innerHTML=viewNu();
+  else if(state.view==='info') m.innerHTML=viewInfo();
   else if(state.view==='karta') m.innerHTML=viewKarta();
   else m.innerHTML=viewMitt();
   bind();
@@ -387,7 +398,7 @@ function cardHTML(s){
   return `<div class="card ${status==='live'?'live':''}" style="--sc:${st.hex}">
     ${artHtml}
     <div class="info">
-      <div class="rowtop"><span class="time">${fmt(s.t)}</span><span class="tend">–${hhmm(s.estEnd)}</span>
+      <div class="rowtop"><span class="time">${fmt(s.t)}</span>
         <span class="stagebadge" style="background:${st.hex}">${s.stage.toUpperCase()}</span>${pill}</div>
       <div class="name">${esc(s.name)}</div>
       <div class="meta">${esc(s.genre||st.desc)}${s.note?(' · '+esc(s.note)):''}</div>
@@ -437,7 +448,7 @@ function gridHTML(d){
       <div class="gcol gaxiscol"><div class="gcolhd gaxishd"></div><div class="gaxis" style="height:${H}px">${axis}</div></div>
       ${cols}
     </div></div>
-    <div class="note">Scener som kolumner, tid nedåt. Tryck på ett pass för att ★-märka. Blockhöjd = uppskattad längd.</div>`;
+    <div class="note">Scener som kolumner, tid nedåt (efter starttid). Tryck på ett pass för att ★-märka.</div>`;
 }
 
 function viewSchema(){
@@ -491,7 +502,43 @@ function viewMitt(){
   const calbtn=`<div class="mapbtns" style="margin:2px 2px 10px"><button class="btn" id="calbtn" style="flex:1;justify-content:center;padding:12px">📅 Lägg till dagen i kalendern</button></div>`;
   let body=''; let lastHour=null;
   favs.forEach(s=>{ const h=s.t.slice(0,2)+':00'; if(h!==lastHour){ body+=`<div class="thead">${h}</div>`; lastHour=h; } body+=cardHTML(s); });
-  return filters+banner+calbtn+body+`<div class="note">⏱ Sluttiderna är <b>uppskattade</b> (WOW publicerar bara starttider). Kalenderpassen får samma längd.</div>`;
+  return filters+banner+calbtn+body;
+}
+
+/* ---------- Praktiskt / Info ---------- */
+let WEATHER=null; // null=ej hämtat, 'loading', 'error', eller daily-objekt
+function loadWeather(){
+  if(WEATHER) return;
+  WEATHER='loading';
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=57.686&longitude=11.949&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FStockholm&start_date=2026-08-13&end_date=2026-08-15')
+    .then(r=>r.ok?r.json():Promise.reject()).then(j=>{ WEATHER=(j&&j.daily&&j.daily.time)?j.daily:'error'; if(state.view==='info')render(); })
+    .catch(()=>{ WEATHER='error'; if(state.view==='info')render(); });
+}
+function wcode(c){
+  if(c===0) return '☀️'; if(c<=3) return '⛅'; if(c<=48) return '🌫️';
+  if(c<=67) return '🌧️'; if(c<=77) return '❄️'; if(c<=82) return '🌦️'; return '⛈️';
+}
+function viewInfo(){
+  loadWeather();
+  const hours=`<div class="infocard"><h3>🕑 Öppettider</h3>
+    <div class="irow"><span>Torsdag 13/8</span><b>14:00–23:00</b></div>
+    <div class="irow"><span>Fredag 14/8</span><b>12:00–01:00</b></div>
+    <div class="irow"><span>Lördag 15/8</span><b>12:00–01:00</b></div>
+    <div class="isub">Tider för Slottsskogen. Kvällarna fortsätter på Stay Out West i stan.</div></div>`;
+  let w;
+  if(WEATHER==='loading'||WEATHER===null) w='<div class="isub">Hämtar väder…</div>';
+  else if(WEATHER==='error') w='<div class="isub">Kunde inte hämta väder just nu (kräver internet, uppdateras närmare festivalen).</div>';
+  else { const lbl=['Torsdag','Fredag','Lördag']; w=WEATHER.time.map((t,i)=>
+    `<div class="irow"><span>${wcode(WEATHER.weathercode[i])} ${lbl[i]||t}</span><b>${Math.round(WEATHER.temperature_2m_max[i])}° / ${Math.round(WEATHER.temperature_2m_min[i])}° · ${WEATHER.precipitation_probability_max[i]}% regn</b></div>`).join(''); }
+  const weather=`<div class="infocard"><h3>🌤️ Väder i Slottsskogen</h3>${w}</div>`;
+  const sow=`<div class="infocard"><h3>🌙 Stay Out West</h3>
+    <div class="isub">Festivalen fortsätter på klubbar och barer i Göteborg varje kväll. Se hela klubbprogrammet hos WOW.</div>
+    <a class="btn" href="https://www.wayoutwest.se/stay-out-west/" target="_blank" rel="noopener" style="margin-top:10px;justify-content:center">Öppna Stay Out West ↗</a></div>`;
+  const know=`<div class="infocard"><h3>ℹ️ Bra att veta</h3>
+    <div class="irow"><span>Dungen (dansscenen)</span><b>18+</b></div>
+    <div class="isub">Mer praktiskt (insläpp, väska, betalning) finns på wayoutwest.se/info.</div>
+    <a class="btn" href="https://www.wayoutwest.se/info/" target="_blank" rel="noopener" style="margin-top:10px;justify-content:center">Officiell info ↗</a></div>`;
+  return `<div style="padding:6px 0 4px">${hours}${weather}${sow}${know}</div>`;
 }
 
 function viewNu(){
