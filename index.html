@@ -185,6 +185,15 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) +
 .irow b{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
 .isub{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:8px}
 .infocard .btn{width:100%}
+.sowcard h3{margin-bottom:6px}
+.sowh{float:right;font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:600}
+.sowsub{font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:600}
+.sowpre{font-size:11px;font-weight:800;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:5px;margin-bottom:4px;letter-spacing:.03em;text-transform:uppercase}
+.sowroom{font-family:var(--disp);font-size:12px;color:var(--neon);letter-spacing:.05em;margin:10px 0 2px}
+.sowrow{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.sowrow:last-child{border-bottom:0}
+.sowt{flex:0 0 50px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.sown{font-weight:700}
 </style>
 </head>
 <body>
@@ -505,14 +514,71 @@ function viewMitt(){
   return filters+banner+calbtn+body;
 }
 
+/* ---------- Stay Out West (klubbkvällar, 18+) ---------- */
+const SOW = [
+  [ // Torsdag 13/8
+    {v:'Pustervik', h:'22–03', rooms:[
+      {r:'Stora', acts:[['22:40','Mietze Conte'],['00:10','Thaiboy Digital'],['01:30','Ninajirachi']]},
+      {r:'Lilla', acts:[['23:40','Matilda Lyn'],['01:00','Weatherday']]} ]},
+    {v:'Folkteatern', h:'22–03', acts:[['23:00','GB'],['00:00','Freak Slug'],['01:15','My New Band Believe']]},
+    {v:'Musikens Hus', h:'22–02', acts:[['23:30','Hayeminol'],['00:40','Agitator']]},
+    {v:'Skeppet', h:'23–02', acts:[['23:45','Tiffi M'],['00:40','Fantasy of a Broken Heart']]},
+    {v:'Annedalskyrkan', h:'22:30–02', acts:[['00:00','James Yorkston & Johanna Söderberg']]},
+    {v:'Filmstudion', h:'22–03', acts:[['23:15','Knut€'],['00:00','The Alchemist'],['01:15','Earl Sweatshirt']]},
+    {v:'Konserthuset', h:'21:30–00', sub:'Garderobshallen', acts:[['23:00','Goran Kajfeš & Andreas Tilliander']]},
+  ],
+  [ // Fredag 14/8
+    {v:'Pustervik', h:'22–04', rooms:[
+      {r:'Stora', acts:[['23:30','Greg Freeman'],['00:40',"Melody's Echo Chamber"],['01:55','Radio Free Alice']]},
+      {r:'Lilla', acts:[['00:15','Sailor Honeymoon'],['01:25','Sharp Pins']]} ]},
+    {v:'Bananpiren', h:'22–04', rooms:[
+      {r:'Kajskjul 105', acts:[['22:00','Dgeral'],['23:30','Honey Dijon'],['01:15','Agnes'],['02:30','Josh Caffé']]},
+      {r:'Honduras (DJs)', acts:[['22:00','Kimia & Thilly'],['00:00','JoolZ'],['02:00','OG Bella']]} ]},
+    {v:'Folkteatern', h:'23–03', acts:[['23:35','Elise Elvira'],['00:25','Orkid'],['01:30','Fanny Avonne']]},
+    {v:'Musikens Hus', h:'23–03', acts:[['00:30','Småland'],['01:40','Esther']]},
+    {v:'Skeppet', h:'22–02', pre:'In This Dunya presents', acts:[['23:00','ITD-Sound (DJ-set)'],['00:10','Helen Sun'],['01:10','Rian Brazil']]},
+    {v:'Annedalskyrkan', h:'23–02', acts:[['00:30','Sven Wunder']]},
+  ],
+  [ // Lördag 15/8
+    {v:'Pustervik', h:'22–04', rooms:[
+      {r:'Stora', acts:[['23:30','A Good Year'],['00:35','Olga Myko'],['01:50','Jane Remover']]},
+      {r:'Lilla', acts:[['00:05','Cockhouse'],['01:20','Supermodel*']]} ]},
+    {v:'Bananpiren', h:'22–04', rooms:[
+      {r:'Kajskjul 105', acts:[['00:50','Iceage'],['02:00','Les Big Byrd']]},
+      {r:'Honduras (DJs)', acts:[['22:00','Marble'],['00:00','Nokta Servo'],['02:00','Vilhelm Hasselgren & Ebende']]} ]},
+    {v:'Folkteatern', h:'23–03', acts:[['23:30','Hannah Cohen'],['00:45','Bleech 9:3'],['01:50','Westside Cowboy']]},
+    {v:'Musikens Hus', h:'23–03', acts:[['23:45','Kid08'],['00:30','Mami Umami'],['01:30','Bricknasty']]},
+    {v:'Skeppet', h:'23–02', pre:'Faithfool Records presents', acts:[['23:30','Passion Tax'],['00:15','9entle'],['01:00',"Sylvie's Head"]]},
+    {v:'Annedalskyrkan', h:'23–02', acts:[['00:30','James K']]},
+  ],
+];
+function sowHTML(d){
+  const row=a=>`<div class="sowrow"><span class="sowt">${a[0]}</span><span class="sown">${esc(a[1])}</span></div>`;
+  return (SOW[d]||[]).map(v=>{
+    let inner='';
+    if(v.pre) inner+=`<div class="sowpre">${esc(v.pre)}</div>`;
+    if(v.rooms) inner+=v.rooms.map(r=>`<div class="sowroom">${esc(r.r)}</div>`+r.acts.map(row).join('')).join('');
+    else inner+=(v.acts||[]).map(row).join('');
+    return `<div class="infocard sowcard"><h3>${esc(v.v)}${v.sub?` <span class="sowsub">${esc(v.sub)}</span>`:''}<span class="sowh">${v.h}</span></h3>${inner}</div>`;
+  }).join('');
+}
+
 /* ---------- Praktiskt / Info ---------- */
-let WEATHER=null; // null=ej hämtat, 'loading', 'error', eller daily-objekt
+let WEATHER=null, WEATHER_TS=0, WEATHER_FETCHING=false; // WEATHER: null | 'error' | daily-objekt
 function loadWeather(){
-  if(WEATHER) return;
-  WEATHER='loading';
+  // 1) visa senast sparade direkt (funkar offline)
+  if(WEATHER===null){ try{ const c=JSON.parse(localStorage.getItem('wow26_weather')||'null'); if(c&&c.data){ WEATHER=c.data; WEATHER_TS=c.ts; } }catch(e){} }
+  // 2) hoppa över om vi redan har färsk data (< 30 min) — undvik onödiga anrop vid varje omritning
+  if(WEATHER && WEATHER!=='error' && WEATHER_TS && (Date.now()-WEATHER_TS < 1800000)) return;
+  // 3) försök uppdatera i bakgrunden (om online)
+  if(WEATHER_FETCHING) return; WEATHER_FETCHING=true;
   fetch('https://api.open-meteo.com/v1/forecast?latitude=57.686&longitude=11.949&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FStockholm&start_date=2026-08-13&end_date=2026-08-15')
-    .then(r=>r.ok?r.json():Promise.reject()).then(j=>{ WEATHER=(j&&j.daily&&j.daily.time)?j.daily:'error'; if(state.view==='info')render(); })
-    .catch(()=>{ WEATHER='error'; if(state.view==='info')render(); });
+    .then(r=>r.ok?r.json():Promise.reject()).then(j=>{
+      if(j&&j.daily&&j.daily.time){ WEATHER=j.daily; WEATHER_TS=Date.now(); try{localStorage.setItem('wow26_weather',JSON.stringify({data:WEATHER,ts:WEATHER_TS}));}catch(e){} }
+      else if(WEATHER===null) WEATHER='error';
+    })
+    .catch(()=>{ if(WEATHER===null) WEATHER='error'; })
+    .finally(()=>{ WEATHER_FETCHING=false; if(state.view==='info')render(); });
 }
 function wcode(c){
   if(c===0) return '☀️'; if(c<=3) return '⛅'; if(c<=48) return '🌫️';
@@ -526,14 +592,20 @@ function viewInfo(){
     <div class="irow"><span>Lördag 15/8</span><b>12:00–01:00</b></div>
     <div class="isub">Tider för Slottsskogen. Kvällarna fortsätter på Stay Out West i stan.</div></div>`;
   let w;
-  if(WEATHER==='loading'||WEATHER===null) w='<div class="isub">Hämtar väder…</div>';
-  else if(WEATHER==='error') w='<div class="isub">Kunde inte hämta väder just nu (kräver internet, uppdateras närmare festivalen).</div>';
-  else { const lbl=['Torsdag','Fredag','Lördag']; w=WEATHER.time.map((t,i)=>
-    `<div class="irow"><span>${wcode(WEATHER.weathercode[i])} ${lbl[i]||t}</span><b>${Math.round(WEATHER.temperature_2m_max[i])}° / ${Math.round(WEATHER.temperature_2m_min[i])}° · ${WEATHER.precipitation_probability_max[i]}% regn</b></div>`).join(''); }
+  if(WEATHER===null) w='<div class="isub">Hämtar väder…</div>';
+  else if(WEATHER==='error') w='<div class="isub">Väder inte hämtat än — anslut till internet en gång så sparas prognosen för offline-bruk.</div>';
+  else { const lbl=['Torsdag','Fredag','Lördag'];
+    w=WEATHER.time.map((t,i)=>
+      `<div class="irow"><span>${wcode(WEATHER.weathercode[i])} ${lbl[i]||t}</span><b>${Math.round(WEATHER.temperature_2m_max[i])}° / ${Math.round(WEATHER.temperature_2m_min[i])}° · ${WEATHER.precipitation_probability_max[i]}% regn</b></div>`).join('');
+    if(WEATHER_TS){ const d=new Date(WEATHER_TS); const p=n=>String(n).padStart(2,'0');
+      const stamp=p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes());
+      const off=(typeof navigator!=='undefined'&&navigator.onLine===false)?' · offline, sparad prognos':'';
+      w+=`<div class="isub">Uppdaterad ${stamp}${off}</div>`; }
+  }
   const weather=`<div class="infocard"><h3>🌤️ Väder i Slottsskogen</h3>${w}</div>`;
-  const sow=`<div class="infocard"><h3>🌙 Stay Out West</h3>
-    <div class="isub">Festivalen fortsätter på klubbar och barer i Göteborg varje kväll. Se hela klubbprogrammet hos WOW.</div>
-    <a class="btn" href="https://www.wayoutwest.se/stay-out-west/" target="_blank" rel="noopener" style="margin-top:10px;justify-content:center">Öppna Stay Out West ↗</a></div>`;
+  const sow=`<div class="infocard"><h3>🌙 Stay Out West · ${DAYS[state.day].lbl}</h3>
+      <div class="isub">Klubbkvällarna i Göteborg (18+). Byt dag högst upp. Tider ungefärliga.</div></div>`
+    + sowHTML(state.day);
   const know=`<div class="infocard"><h3>ℹ️ Bra att veta</h3>
     <div class="irow"><span>Dungen (dansscenen)</span><b>18+</b></div>
     <div class="isub">Mer praktiskt (insläpp, väska, betalning) finns på wayoutwest.se/info.</div>
