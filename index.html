@@ -188,15 +188,17 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) +
 .irow b{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
 .isub{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:8px}
 .infocard .btn{width:100%}
-.sowcard h3{margin-bottom:6px}
-.sowh{float:right;font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:600}
+.sowmeta{font-size:12px;color:var(--muted);margin:0 2px 10px}
+.sowvh{font-family:var(--disp);font-size:14px;color:var(--neon);letter-spacing:.03em;margin:2px 0 6px;text-shadow:0 0 10px var(--neon-glow)}
+.sowh{float:right;font-family:var(--sans);font-size:11px;color:var(--muted);font-weight:600;text-shadow:none}
 .sowsub{font-family:var(--sans);font-size:12px;color:var(--muted);font-weight:600}
-.sowpre{font-size:11px;font-weight:800;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:5px;margin-bottom:4px;letter-spacing:.03em;text-transform:uppercase}
-.sowroom{font-family:var(--disp);font-size:12px;color:var(--neon);letter-spacing:.05em;margin:10px 0 2px}
-.sowrow{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.sowpre{font-size:11px;font-weight:800;color:var(--ink);margin:0 0 4px;letter-spacing:.03em;text-transform:uppercase}
+.sowrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
 .sowrow:last-child{border-bottom:0}
-.sowt{flex:0 0 50px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
-.sown{font-weight:700}
+.sowt{flex:0 0 48px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.sown{flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sowsp{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(30,215,96,.4);background:rgba(30,215,96,.12)}
+.sowsp svg{width:16px;height:16px;border-radius:50%}
 </style>
 </head>
 <body>
@@ -512,6 +514,18 @@ function filtered(){
                             : (a.startMin-b.startMin || STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage)));
 }
 
+function sowScheduleHTML(d){
+  const nights=['natten mot fredag','natten mot lördag','natten mot söndag'];
+  const row=a=>`<div class="sowrow"><span class="sowt">${a[0]}</span><span class="sown">${esc(a[1])}</span><a class="sowsp" href="${spotify(a[1])}" target="_blank" rel="noopener" aria-label="Öppna i Spotify">${SP_ICON}</a></div>`;
+  const cards=(SOW[d]||[]).map(v=>{
+    let inner='';
+    if(v.rooms) inner=v.rooms.map(r=>`<div class="sowvh">${esc(v.v)} – ${esc(r.r)}<span class="sowh">${v.h}</span></div>`+r.acts.map(row).join('')).join('');
+    else inner=`<div class="sowvh">${esc(v.v)}${v.sub?' · '+esc(v.sub):''}<span class="sowh">${v.h}</span></div>`+(v.pre?`<div class="sowpre">${esc(v.pre)}</div>`:'')+(v.acts||[]).map(row).join('');
+    return `<div class="infocard sowcard">${inner}</div>`;
+  }).join('');
+  return `<div class="thead" style="margin-top:22px">🌙 Stay Out West</div>
+    <div class="sowmeta">${nights[d]} · i stan · 18 år · cirkatider</div>${cards}`;
+}
 function gridHTML(d){
   const sets=SETS.filter(s=>s.d===d);
   if(!sets.length) return '<div class="empty">Inget denna dag.</div>';
@@ -569,7 +583,9 @@ function viewSchema(){
     let lastHour=null;
     list.forEach(s=>{ const h=s.t.slice(0,2)+':00'; if(h!==lastHour){ body+=`<div class="thead">${h}</div>`; lastHour=h; } body+=cardHTML(s); });
   }
-  return filters+body+`
+  // Stay Out West som egen sektion sist på dagen (bara i normal dagvy)
+  const sow = (!searching && !state.favOnly && state.stageFilter==='all') ? sowScheduleHTML(state.day) : '';
+  return filters+body+sow+`
     <div class="note">🎧 <b>Smakprov</b> = ~30 sek klipp via Apple (ofta hooken, inte garanterat exakt refrängen). Spotify tog bort sina egna förhandsklipp 2024 — därför öppnar <b>Spotify</b>-knappen artisten direkt i appen istället.</div>`;
 }
 
@@ -682,14 +698,11 @@ function viewInfo(){
       w+=`<div class="isub">Uppdaterad ${stamp}${off}</div>`; }
   }
   const weather=`<div class="infocard"><h3>🌤️ Väder i Slottsskogen</h3>${w}</div>`;
-  const sow=`<div class="infocard"><h3>🌙 Stay Out West · ${DAYS[state.day].lbl}</h3>
-      <div class="isub">Klubbkvällarna i Göteborg (18+). Byt dag högst upp. Tider ungefärliga.</div></div>`
-    + sowHTML(state.day);
   const know=`<div class="infocard"><h3>ℹ️ Bra att veta</h3>
     <div class="irow"><span>Dungen (dansscenen)</span><b>18+</b></div>
     <div class="isub">Mer praktiskt (insläpp, väska, betalning) finns på wayoutwest.se/info.</div>
     <a class="btn" href="https://www.wayoutwest.se/info/" target="_blank" rel="noopener" style="margin-top:10px;justify-content:center">Officiell info ↗</a></div>`;
-  return `<div style="padding:6px 0 4px">${hours}${weather}${sow}${know}</div>`;
+  return `<div style="padding:6px 0 4px">${hours}${weather}${know}</div>`;
 }
 
 function viewNu(){
@@ -779,7 +792,13 @@ function bind(){
 document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{state.view=b.dataset.view; if(state.view!=='karta')state.mapStage=state.mapStage; render(); window.scrollTo(0,0);});
 
 /* clock + live refresh */
-function tick(){ const t=new Date(); $('#clock').textContent=t.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}); }
+function tick(){
+  const t=new Date(); const clock=t.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
+  const {dayIdx}=nowInfo();
+  if(dayIdx>=0){ $('#clock').textContent=clock; return; }              // pågår → visa klocka
+  const diff=new Date('2026-08-13T12:00:00')-t;
+  $('#clock').textContent = diff>0 ? (Math.ceil(diff/86400000)+' dgr kvar') : clock;
+}
 tick(); setInterval(()=>{tick(); if(state.view==='nu')render();},30000);
 
 computeEnds();   // beräkna tider innan första render (SOW visas som egen sektion, ej i SETS)
