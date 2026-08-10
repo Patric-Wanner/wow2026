@@ -335,7 +335,7 @@ function statusOf(s){
 }
 
 /* ---------- audio player: topp-3-medley med Spotify-liknande crossfade ---------- */
-const CLIP=12, FADE=1;                 // sek per låt, sek övergång
+const CLIP=15, FADE=2;                 // sek per låt, sek crossfade (equal-power, Spotify-likt)
 const AP=[new Audio(), new Audio()]; AP.forEach(a=>a.preload='auto');
 let curPlay=null, curSet=null, medley=[], medIdx=0, act=0, fading=false, fadeTimer=null;
 const A=()=>AP[act], other=()=>AP[act^1];
@@ -361,9 +361,18 @@ function crossfade(){
   const t0=performance.now();
   fadeTimer=setInterval(()=>{
     const p=Math.min((performance.now()-t0)/(FADE*1000),1);
-    from.volume=Math.max(0,1-p); to.volume=Math.min(1,p);
+    from.volume=Math.cos(p*Math.PI/2); to.volume=Math.sin(p*Math.PI/2); // equal-power
     if(p>=1){ clearInterval(fadeTimer); fadeTimer=null; from.pause(); from.volume=1; act^=1; medIdx++; fading=false; updPMeta(); preloadNext(); syncPBtn(); }
-  },40);
+  },30);
+}
+function fadeOutEnd(){                  // mjuk uttoning på sista låten
+  if(fading) return; fading=true;
+  const from=A(), t0=performance.now();
+  fadeTimer=setInterval(()=>{
+    const p=Math.min((performance.now()-t0)/(FADE*1000),1);
+    from.volume=Math.cos(p*Math.PI/2);
+    if(p>=1){ clearInterval(fadeTimer); fadeTimer=null; from.pause(); from.volume=1; fading=false; $('#pfill').style.width='100%'; syncPBtn(); }
+  },30);
 }
 function playSet(s){
   const id=idOf(s);
@@ -383,7 +392,7 @@ function onTime(e){
   $('#pfill').style.width = (total?Math.min(elapsed/total,1)*100:0)+'%';
   if(multi){
     if(medIdx<medley.length-1 && a.currentTime>=CLIP-FADE) crossfade();
-    else if(medIdx===medley.length-1 && a.currentTime>=CLIP) a.pause();
+    else if(medIdx===medley.length-1 && a.currentTime>=CLIP-FADE) fadeOutEnd();
   }
 }
 function onEnd(e){
