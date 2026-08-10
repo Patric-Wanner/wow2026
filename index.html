@@ -143,6 +143,39 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) +
 
 .note{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:6px 2px 16px;line-height:1.6}
 .note b{color:var(--ink);font-weight:700}
+
+/* sluttid på kort */
+.tend{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:1px}
+
+/* ---------- Nu-vy ---------- */
+.nucount{background:linear-gradient(180deg,var(--card2),#141620);border:1px solid var(--line2);border-radius:18px;padding:18px 16px;margin:10px 2px 10px;text-align:center}
+.nucount.live{border-color:var(--neon);box-shadow:0 0 30px -6px var(--neon-glow)}
+.nulbl{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.nubig{font-family:var(--disp);font-size:29px;line-height:1.05;margin:7px 0 5px;letter-spacing:.01em}
+.nucount.live .nubig{color:var(--neon);text-shadow:0 0 18px var(--neon-glow)}
+.nusub{font-size:13px;color:var(--ink);font-weight:600}
+.nustage{background:var(--card);border:1px solid var(--line);border-left:4px solid;border-radius:14px;padding:11px 14px;margin-bottom:9px}
+.nustagehd{font-family:var(--disp);font-size:15px;letter-spacing:.03em;margin-bottom:3px}
+.nunow{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.nunext{font-size:12.5px;color:var(--muted);margin-top:3px}
+
+/* ---------- Rutschema (grid) ---------- */
+.gridwrap{overflow-x:auto;margin:4px 0 8px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.grid{display:flex;min-width:640px}
+.gcol{flex:1;min-width:112px;border-right:1px solid var(--line)}
+.gcol:last-child{border-right:0}
+.gaxiscol{flex:0 0 46px;min-width:46px;position:sticky;left:0;z-index:3;background:var(--bg2)}
+.gcolhd{position:sticky;top:0;z-index:2;height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:12px;color:#0b0b10;letter-spacing:.03em}
+.gaxishd{background:var(--bg2)}
+.gaxis{position:relative}
+.gh{position:absolute;right:5px;transform:translateY(-6px);font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.gcolbody{position:relative;background-image:linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-repeat:repeat-y}
+.gblock{position:absolute;left:3px;right:3px;border:none;border-radius:8px;color:#0b0b10;text-align:left;padding:4px 6px;overflow:hidden;display:flex;flex-direction:column;gap:1px;box-shadow:0 1px 3px #0006;cursor:pointer}
+.gblock.on{outline:2px solid var(--neon);outline-offset:1px}
+.gblock.live{box-shadow:0 0 0 2px #fff,0 0 12px var(--neon-glow)}
+.gbt{font-size:10px;font-weight:800;opacity:.9;font-variant-numeric:tabular-nums}
+.gbn{font-size:12px;font-weight:800;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+.gnow{position:absolute;left:0;right:0;height:2px;background:var(--neon);box-shadow:0 0 8px var(--neon-glow);z-index:1}
 </style>
 </head>
 <body>
@@ -165,8 +198,9 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) +
 
 <nav id="nav">
   <button class="navbtn active" data-view="schema"><span class="ic">🎫</span>Schema</button>
+  <button class="navbtn" data-view="nu"><span class="ic">🔴</span>Nu</button>
   <button class="navbtn" data-view="karta"><span class="ic">🗺️</span>Karta</button>
-  <button class="navbtn" data-view="mitt"><span class="ic">⭐</span>Mitt schema</button>
+  <button class="navbtn" data-view="mitt"><span class="ic">⭐</span>Mitt</button>
 </nav>
 
 <audio id="audio" preload="none"></audio>
@@ -233,20 +267,29 @@ const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 // Spotify-logga (glyf) som inline-SVG.
 const SP_ICON = '<svg class="spico" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ED760"/><path fill="#000" d="M17.9 10.9C14.7 9 9.35 8.8 6.3 9.75c-.5.15-1-.13-1.15-.62-.15-.48.13-1 .62-1.14 3.5-1.06 9.4-.86 13.1 1.35.44.26.6.83.33 1.27-.26.44-.83.6-1.3.33m-.1 2.8c-.23.36-.7.48-1.07.26-2.67-1.64-6.74-2.12-9.9-1.16-.4.12-.85-.1-.97-.5-.12-.42.1-.85.5-.97 3.6-1.1 8.1-.56 11.17 1.32.35.22.47.7.26 1.06m-1.2 2.7c-.18.3-.56.38-.85.2-2.33-1.43-5.27-1.76-8.73-.97-.33.08-.66-.13-.74-.46-.08-.33.13-.66.46-.74 3.78-.86 7.03-.48 9.65 1.13.3.17.38.55.2.84"/></svg>';
 
-// compute end time per set = next set start on same stage/day, else +60min
+// endMin = nästa pass start (contiguous). estEnd = uppskattad sluttid (60 min,
+// 90 för sista/headliner), aldrig in i nästa pass. WOW ger bara starttider.
 (function computeEnds(){
   const groups={};
   SETS.forEach(s=>{(groups[s.d+'|'+s.stage]=groups[s.d+'|'+s.stage]||[]).push(s);});
   Object.values(groups).forEach(arr=>{
     arr.sort((a,b)=>mins(a.t)-mins(b.t));
-    arr.forEach((s,i)=>{ s.endMin = i<arr.length-1 ? mins(arr[i+1].t) : Math.min(mins(s.t)+75, 24*60+30); s.startMin=mins(s.t); });
+    arr.forEach((s,i)=>{
+      s.startMin = mins(s.t);
+      const next = i<arr.length-1 ? mins(arr[i+1].t) : null;
+      s.endMin = next!==null ? next : Math.min(s.startMin+90, 24*60+60);
+      const dur = (i===arr.length-1) ? 90 : 60;
+      let e = s.startMin + dur; if(next!==null) e = Math.min(e, next);
+      s.estEnd = e;
+    });
   });
 })();
+const hhmm = m => String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 
 /* ---------- state ---------- */
 let FAV = new Set(JSON.parse(localStorage.getItem('wow26_favs')||'[]'));
 const saveFav = ()=>localStorage.setItem('wow26_favs',JSON.stringify([...FAV]));
-let state = { day:0, view:'schema', stageFilter:'all', q:'', favOnly:false, mapStage:null };
+let state = { day:0, view:'schema', stageFilter:'all', q:'', favOnly:false, mapStage:null, layout:'list' };
 // default day: if festival is running, jump to today
 (function initDay(){ const t=new Date(); const iso=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); const i=DAYS.findIndex(d=>d.date===iso); if(i>=0) state.day=i; })();
 
@@ -288,11 +331,36 @@ $('#pclose').onclick=()=>{audio.pause();$('#player').classList.remove('show');do
 
 function spotify(name){ return 'https://open.spotify.com/search/'+encodeURIComponent(name); }
 
+/* ---------- kalender-export (.ics) ---------- */
+function icsStamp(d,min){
+  const base=new Date(DAYS[d].date+'T00:00:00');
+  base.setMinutes(base.getMinutes()+min);
+  const p=n=>String(n).padStart(2,'0');
+  return base.getFullYear()+p(base.getMonth()+1)+p(base.getDate())+'T'+p(base.getHours())+p(base.getMinutes())+'00';
+}
+function downloadICS(d){
+  const favs=SETS.filter(s=>FAV.has(idOf(s))&&s.d===d).sort((a,b)=>a.startMin-b.startMin);
+  if(!favs.length) return;
+  const esc2=v=>(v||'').replace(/([,;\\])/g,'\\$1');
+  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WOW2026//SchemaApp//SV\r\nCALSCALE:GREGORIAN\r\n';
+  favs.forEach((s,i)=>{
+    ics+='BEGIN:VEVENT\r\nUID:wow2026-'+d+'-'+i+'@wow\r\n'
+      +'DTSTART:'+icsStamp(d,s.startMin)+'\r\nDTEND:'+icsStamp(d,s.estEnd)+'\r\n'
+      +'SUMMARY:'+esc2(s.name+' — '+s.stage)+'\r\nLOCATION:'+esc2(s.stage+', Slottsskogen')+'\r\n'
+      +'DESCRIPTION:'+esc2('Way Out West 2026 · sluttid uppskattad')+'\r\nEND:VEVENT\r\n';
+  });
+  ics+='END:VCALENDAR\r\n';
+  const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  const a=document.createElement('a'); a.href=url; a.download='wow2026-'+DAYS[d].date+'.ics';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
 /* ---------- render ---------- */
 function render(){
   renderDayTabs(); renderNav();
   const m=$('#main');
   if(state.view==='schema') m.innerHTML=viewSchema();
+  else if(state.view==='nu') m.innerHTML=viewNu();
   else if(state.view==='karta') m.innerHTML=viewKarta();
   else m.innerHTML=viewMitt();
   bind();
@@ -319,7 +387,7 @@ function cardHTML(s){
   return `<div class="card ${status==='live'?'live':''}" style="--sc:${st.hex}">
     ${artHtml}
     <div class="info">
-      <div class="rowtop"><span class="time">${fmt(s.t)}</span>
+      <div class="rowtop"><span class="time">${fmt(s.t)}</span><span class="tend">–${hhmm(s.estEnd)}</span>
         <span class="stagebadge" style="background:${st.hex}">${s.stage.toUpperCase()}</span>${pill}</div>
       <div class="name">${esc(s.name)}</div>
       <div class="meta">${esc(s.genre||st.desc)}${s.note?(' · '+esc(s.note)):''}</div>
@@ -343,13 +411,48 @@ function filtered(){
                             : (a.startMin-b.startMin || STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage)));
 }
 
+function gridHTML(d){
+  const sets=SETS.filter(s=>s.d===d);
+  if(!sets.length) return '<div class="empty">Inget denna dag.</div>';
+  const t0=Math.floor(Math.min(...sets.map(s=>s.startMin))/60)*60;
+  const t1=Math.ceil(Math.max(...sets.map(s=>s.estEnd))/60)*60;
+  const ppm=1.15, HOUR=60*ppm, H=(t1-t0)*ppm;
+  const {dayIdx,nowMin}=nowInfo();
+  let axis='';
+  for(let m=t0;m<=t1;m+=60) axis+=`<div class="gh" style="top:${(m-t0)*ppm}px">${hhmm(m)}</div>`;
+  const nowTop=(dayIdx===d && nowMin>=t0 && nowMin<=t1) ? (nowMin-t0)*ppm : null;
+  let cols='';
+  STAGE_ORDER.forEach(st=>{
+    let blocks='';
+    sets.filter(s=>s.stage===st).forEach(s=>{ const id=idOf(s),fav=FAV.has(id),live=statusOf(s)==='live';
+      const top=(s.startMin-t0)*ppm, h=Math.max((s.estEnd-s.startMin)*ppm,28);
+      blocks+=`<button class="gblock ${fav?'on':''} ${live?'live':''}" data-fav="${id}" style="top:${top}px;height:${h}px;background:${STAGES[st].hex}">
+        <span class="gbt">${s.t}${fav?' ★':''}</span><span class="gbn">${esc(s.name)}</span></button>`;
+    });
+    const nl=nowTop!=null?`<div class="gnow" style="top:${nowTop}px"></div>`:'';
+    cols+=`<div class="gcol"><div class="gcolhd" style="background:${STAGES[st].hex}">${st}</div>
+      <div class="gcolbody" style="height:${H}px;background-size:100% ${HOUR}px">${nl}${blocks}</div></div>`;
+  });
+  return `<div class="gridwrap"><div class="grid">
+      <div class="gcol gaxiscol"><div class="gcolhd gaxishd"></div><div class="gaxis" style="height:${H}px">${axis}</div></div>
+      ${cols}
+    </div></div>
+    <div class="note">Scener som kolumner, tid nedåt. Tryck på ett pass för att ★-märka. Blockhöjd = uppskattad längd.</div>`;
+}
+
 function viewSchema(){
+  const toggle=`<div class="chips" style="margin-bottom:4px">
+    <button class="chip ${state.layout==='list'?'active':''}" data-layout="list">☰ Lista</button>
+    <button class="chip ${state.layout==='grid'?'active':''}" data-layout="grid">▦ Rutschema</button>
+  </div>`;
+  if(state.layout==='grid') return `<div class="filters" style="padding-bottom:4px">${toggle}</div>`+gridHTML(state.day);
   const chips = `<div class="chips" id="chips">
     <button class="chip ${state.stageFilter==='all'?'active':''}" data-stage="all">Alla scener</button>
     ${STAGE_ORDER.map(st=>`<button class="chip ${state.stageFilter===st?'active':''}" data-stage="${st}" style="${state.stageFilter===st?('color:'+STAGES[st].hex):''}"><span class="dot" style="background:${STAGES[st].hex}"></span>${st}</button>`).join('')}
     <button class="chip favchip ${state.favOnly?'active':''}" data-favonly="1">★ Favoriter</button>
   </div>`;
   const filters=`<div class="filters">
+    ${toggle}
     <input class="search" id="search" placeholder="Sök artist, genre…" value="${esc(state.q)}">
     ${chips}
   </div>`;
@@ -377,7 +480,7 @@ function viewMitt(){
   // clash detection
   let clashes=[];
   for(let i=0;i<favs.length;i++)for(let j=i+1;j<favs.length;j++){
-    if(favs[i].stage!==favs[j].stage && favs[i].startMin<favs[j].endMin && favs[j].startMin<favs[i].endMin)
+    if(favs[i].stage!==favs[j].stage && favs[i].startMin<favs[j].estEnd && favs[j].startMin<favs[i].estEnd)
       clashes.push([favs[i],favs[j]]);
   }
   let banner='';
@@ -385,9 +488,43 @@ function viewMitt(){
     const c=clashes.map(([a,b])=>`${esc(a.name)} (${a.t}) ✕ ${esc(b.name)} (${b.t})`).slice(0,4).join('<br>');
     banner=`<div class="clash">⚠️ <div><b>Krockar (${clashes.length}):</b><br>${c}</div></div>`;
   }
+  const calbtn=`<div class="mapbtns" style="margin:2px 2px 10px"><button class="btn" id="calbtn" style="flex:1;justify-content:center;padding:12px">📅 Lägg till dagen i kalendern</button></div>`;
   let body=''; let lastHour=null;
   favs.forEach(s=>{ const h=s.t.slice(0,2)+':00'; if(h!==lastHour){ body+=`<div class="thead">${h}</div>`; lastHour=h; } body+=cardHTML(s); });
-  return filters+banner+body;
+  return filters+banner+calbtn+body+`<div class="note">⏱ Sluttiderna är <b>uppskattade</b> (WOW publicerar bara starttider). Kalenderpassen får samma längd.</div>`;
+}
+
+function viewNu(){
+  const {dayIdx,nowMin}=nowInfo();
+  if(dayIdx<0){ // före/efter festivalen
+    const now=new Date(), start=new Date(DAYS[0].date+'T14:00:00'), diff=start-now;
+    let hero;
+    if(diff>0){ const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000);
+      hero=`<div class="nucount"><div class="nulbl">Way Out West börjar om</div><div class="nubig">${d} d ${h} h</div><div class="nusub">Torsdag 13 aug · Slottsskogen</div></div>`;
+    } else hero=`<div class="nucount"><div class="nulbl">Way Out West</div><div class="nubig">Vi ses nästa år 🎶</div></div>`;
+    const first=SETS.filter(s=>s.d===0).sort((a,b)=>a.startMin-b.startMin).slice(0,4);
+    return hero+`<div class="thead">Först ut · torsdag</div>`+first.map(cardHTML).join('');
+  }
+  const day=DAYS[dayIdx];
+  const myNext=SETS.filter(s=>s.d===dayIdx&&FAV.has(idOf(s))&&s.startMin>nowMin).sort((a,b)=>a.startMin-b.startMin)[0];
+  const myNow=SETS.find(s=>s.d===dayIdx&&FAV.has(idOf(s))&&nowMin>=s.startMin&&nowMin<s.estEnd);
+  let hero='';
+  if(myNow) hero=`<div class="nucount live"><div class="nulbl">🔴 Du är på</div><div class="nubig">${esc(myNow.name)}</div><div class="nusub">${myNow.stage} · till ~${hhmm(myNow.estEnd)}</div></div>`;
+  else if(myNext){ const m=myNext.startMin-nowMin, cd=m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
+    hero=`<div class="nucount"><div class="nulbl">Ditt nästa pass · om ${cd}</div><div class="nubig">${esc(myNext.name)}</div><div class="nusub">${myNext.t} · ${myNext.stage}</div></div>`;
+  } else hero=`<div class="nucount"><div class="nulbl">Ditt schema</div><div class="nubig">Inga fler favoriter idag</div><div class="nusub">Stjärnmärk fler i Schema-vyn</div></div>`;
+  let rows='';
+  STAGE_ORDER.forEach(st=>{
+    const list=SETS.filter(s=>s.d===dayIdx&&s.stage===st).sort((a,b)=>a.startMin-b.startMin);
+    const now=list.find(s=>nowMin>=s.startMin&&nowMin<s.endMin);
+    const next=list.find(s=>s.startMin>nowMin);
+    rows+=`<div class="nustage" style="border-left-color:${STAGES[st].hex}">
+      <div class="nustagehd" style="color:${STAGES[st].hex}">${st}</div>
+      <div class="nunow">${now?`<span class="livepill">NU</span> ${esc(now.name)}`:'<span style="color:var(--faint)">Inget just nu</span>'}</div>
+      <div class="nunext">${next?`Härnäst ${next.t} · ${esc(next.name)}`:'Klart för idag'}</div>
+    </div>`;
+  });
+  return hero+`<div class="thead">Just nu · ${day.lbl}</div>`+rows;
 }
 
 function stagePanelHTML(){
@@ -437,12 +574,14 @@ function bind(){
   document.querySelectorAll('[data-fav]').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleFav(b.dataset.fav);});
   document.querySelectorAll('[data-play]').forEach(b=>b.onclick=e=>{e.stopPropagation();const s=SETS.find(x=>idOf(x)===b.dataset.play);if(s)playSet(s);});
   document.querySelectorAll('[data-mapstage]').forEach(b=>b.onclick=()=>selectStage(b.dataset.mapstage));
+  const cb=$('#calbtn'); if(cb)cb.onclick=()=>downloadICS(state.day);
+  document.querySelectorAll('[data-layout]').forEach(b=>b.onclick=()=>{state.layout=b.dataset.layout;render();});
 }
 document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{state.view=b.dataset.view; if(state.view!=='karta')state.mapStage=state.mapStage; render(); window.scrollTo(0,0);});
 
 /* clock + live refresh */
 function tick(){ const t=new Date(); $('#clock').textContent=t.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'}); }
-tick(); setInterval(()=>{tick(); if(state.view!=='karta')render();},30000);
+tick(); setInterval(()=>{tick(); if(state.view==='nu')render();},30000);
 
 render();
 
