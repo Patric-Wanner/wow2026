@@ -103,13 +103,14 @@ main{padding:6px 14px 24px}
 /* ---------- Map (clickable image) ---------- */
 .mapimg-wrap{position:relative;margin:8px 0 10px;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 12px 34px -14px rgba(0,0,0,.85);line-height:0}
 .mapimg{width:100%;display:block}
-.hot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;padding:0;cursor:pointer}
-.hot::before{content:"";width:34px;height:34px;border-radius:50%;border:3px solid var(--sc);background:radial-gradient(circle,color-mix(in srgb,var(--sc) 30%,transparent),transparent 72%);box-shadow:0 0 14px var(--sc),0 2px 6px #000a;transition:.15s}
-.hot:active::before{transform:scale(.9)}
-.hot .hlbl{font-family:var(--disp);font-size:13px;letter-spacing:.02em;color:#fff;background:rgba(8,9,13,.82);padding:2px 8px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 6px #000a}
-.hot.sel::before{width:42px;height:42px;background:radial-gradient(circle,color-mix(in srgb,var(--sc) 55%,transparent),transparent 70%);box-shadow:0 0 0 4px color-mix(in srgb,var(--sc) 45%,transparent),0 0 22px var(--sc);animation:hotpulse 1.6s infinite}
-@keyframes hotpulse{50%{box-shadow:0 0 0 8px transparent,0 0 26px var(--sc)}}
-.hot.sel .hlbl{background:var(--sc);color:#0b0b10}
+.hot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:5px;background:none;border:none;padding:0;cursor:pointer}
+.hot::before{content:"";width:46px;height:46px;border-radius:50%;border:3px solid var(--sc);background:radial-gradient(circle,color-mix(in srgb,var(--sc) 22%,transparent),transparent 70%);box-shadow:0 0 22px var(--sc),0 0 8px var(--sc),0 2px 6px #000a;transition:.15s}
+.hot:active::before{transform:scale(.92)}
+.hot .hlbl{font-family:var(--disp);font-size:12.5px;letter-spacing:.02em;color:#0b0b10;background:var(--sc);padding:2px 9px;border-radius:8px;white-space:nowrap;box-shadow:0 0 12px var(--sc),0 2px 5px #000a}
+.hot .hlbl b{font-weight:400;opacity:.85}
+.hot.sel::before{width:56px;height:56px;background:radial-gradient(circle,color-mix(in srgb,var(--sc) 45%,transparent),transparent 68%);box-shadow:0 0 0 4px color-mix(in srgb,var(--sc) 45%,transparent),0 0 30px var(--sc);animation:hotpulse 1.6s infinite}
+@keyframes hotpulse{50%{box-shadow:0 0 0 9px transparent,0 0 34px var(--sc)}}
+.hot.sel .hlbl{box-shadow:0 0 18px var(--sc),0 2px 5px #000a}
 .maphint{font-size:12px;color:var(--muted);padding:0 4px 8px;line-height:1.5}
 .mapbtns{display:flex;gap:9px;margin:4px 0 10px}
 .mapbtns .btn{flex:1;justify-content:center;padding:13px;font-size:14px}
@@ -725,9 +726,10 @@ function stagePanelHTML(){
       </div>`;}).join(''):'<div style="color:var(--muted);padding:8px 2px">Inget på denna scen denna dag.</div>'}
     </div>`;
 }
+function firstStart(st,d){ const l=SETS.filter(s=>s.d===d&&s.stage===st&&!s.sow); if(!l.length)return ''; const m=Math.min(...l.map(s=>s.startMin)); return (l.find(s=>s.startMin===m).t||'').replace(':','.'); }
 function viewKarta(){
   const legend = STAGE_ORDER.map(st=>`<span class="chip ${state.mapStage===st?'active':''}" data-mapstage="${st}" style="color:${STAGES[st].hex}"><span class="dot" style="background:${STAGES[st].hex}"></span>${st}</span>`).join('');
-  const hots = STAGE_ORDER.map(st=>{const p=MAPHOT[st];return `<button class="hot ${state.mapStage===st?'sel':''}" data-mapstage="${st}" style="left:${p.x}%;top:${p.y}%;--sc:${STAGES[st].hex}" aria-label="${st}"><span class="hlbl">${st}</span></button>`;}).join('');
+  const hots = STAGE_ORDER.map(st=>{const p=MAPHOT[st];const t=firstStart(st,state.day);return `<button class="hot ${state.mapStage===st?'sel':''}" data-mapstage="${st}" style="left:${p.x}%;top:${p.y}%;--sc:${STAGES[st].hex}" aria-label="${st}"><span class="hlbl">${st}${t?` <b>${t}</b>`:''}</span></button>`;}).join('');
   return `<div class="filters" style="padding-top:6px"><div class="chips">${legend}</div></div>
     <div class="mapimg-wrap">
       <img class="mapimg" src="${MAPIMG}" alt="Way Out West – officiell karta över Slottsskogen">
