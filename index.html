@@ -357,12 +357,19 @@ function crossfade(){
   fading=true;
   const from=A(), to=other();
   if(to.src!==medley[medIdx+1].preview) to.src=medley[medIdx+1].preview;
-  to.currentTime=0; to.volume=0; to.play().catch(()=>{});
+  to.currentTime=0; to.volume=0;
+  let toStarted=false;
   const t0=performance.now();
+  // Sekventiell övergång: A tonas UT först, B tonas IN sen (liten överlapp) → aldrig
+  // två låtar starkt samtidigt = ingen krock, men ändå mjukt utan tyst lucka.
   fadeTimer=setInterval(()=>{
     const p=Math.min((performance.now()-t0)/(FADE*1000),1);
-    from.volume=Math.cos(p*Math.PI/2); to.volume=Math.sin(p*Math.PI/2); // equal-power
-    if(p>=1){ clearInterval(fadeTimer); fadeTimer=null; from.pause(); from.volume=1; act^=1; medIdx++; fading=false; updPMeta(); preloadNext(); syncPBtn(); }
+    from.volume=Math.max(0, 1 - p/0.55);            // ute vid ~55% av faden
+    if(p>=0.45){                                     // in börjar vid ~45%
+      if(!toStarted){ toStarted=true; to.play().catch(()=>{}); }
+      to.volume=Math.min(1, (p-0.45)/0.55);
+    }
+    if(p>=1){ clearInterval(fadeTimer); fadeTimer=null; from.pause(); from.volume=1; to.volume=1; act^=1; medIdx++; fading=false; updPMeta(); preloadNext(); syncPBtn(); }
   },30);
 }
 function fadeOutEnd(){                  // mjuk uttoning på sista låten
