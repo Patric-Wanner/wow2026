@@ -1,5 +1,5 @@
 /* Way Out West 2026 – service worker (offline app shell) */
-const CACHE = 'wow26-v5';
+const CACHE = 'wow26-v6';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -13,12 +13,26 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return; // iTunes-ljud & Spotify: alltid nätet
+  if (url.origin !== location.origin) return; // iTunes-ljud, Spotify, väder: alltid nätet
+
+  // HTML-sidan: NÄTET-FÖRST (färsk version online, cache bara som offline-reserv)
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isHTML) {
+    e.respondWith(
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', copy));
+        return res;
+      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+  // Övriga egna assets (ikoner, manifest): cache-först
   e.respondWith(
     caches.match(req).then(hit => hit || fetch(req).then(res => {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(req, copy));
       return res;
-    }).catch(() => caches.match('./index.html')))
+    }))
   );
 });
