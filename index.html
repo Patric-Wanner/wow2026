@@ -334,9 +334,12 @@ function statusOf(s){
   return null;
 }
 
-/* ---------- audio player (topp-3-medley, ~7 sek per låt) ---------- */
-const audio=$('#audio'); let curPlay=null, curSet=null, medley=[], medIdx=0;
-const CLIP=10; // sekunder per låt i medley
+/* ---------- audio player: topp-3-medley med Spotify-liknande crossfade ---------- */
+const CLIP=12, FADE=1;                 // sek per låt, sek övergång
+const AP=[new Audio(), new Audio()]; AP.forEach(a=>a.preload='auto');
+let curPlay=null, curSet=null, medley=[], medIdx=0, act=0, fading=false, fadeTimer=null;
+const A=()=>AP[act], other=()=>AP[act^1];
+function isPlaying(id){ return curPlay===id && A() && !A().paused; }
 function clipsOf(s){ return (s.top3&&s.top3.length)?s.top3 : (s.preview?[{track:s.track,preview:s.preview,art:s.art}]:[]); }
 function updPMeta(){
   const c=medley[medIdx]||{};
@@ -346,30 +349,51 @@ function updPMeta(){
   const pa=$('#part'); const art=c.art||(curSet&&curSet.art);
   if(art){pa.src=art;pa.classList.remove('ph');pa.textContent='';} else {pa.removeAttribute('src');pa.classList.add('ph');}
 }
-function playClip(i){ medIdx=i; audio.src=medley[i].preview; audio.currentTime=0; audio.play().catch(()=>{}); updPMeta(); }
+function preloadNext(){ if(medIdx+1<medley.length){ const n=other(); if(n.src!==medley[medIdx+1].preview){ n.src=medley[medIdx+1].preview; n.load(); } } }
+function stopFade(){ if(fadeTimer){clearInterval(fadeTimer);fadeTimer=null;} fading=false; }
+function startClip(i){ medIdx=i; const a=A(); if(a.src!==medley[i].preview) a.src=medley[i].preview; a.volume=1; a.currentTime=0; a.play().catch(()=>{}); updPMeta(); preloadNext(); syncPBtn(); }
+function crossfade(){
+  if(fading || medIdx+1>=medley.length) return;
+  fading=true;
+  const from=A(), to=other();
+  if(to.src!==medley[medIdx+1].preview) to.src=medley[medIdx+1].preview;
+  to.currentTime=0; to.volume=0; to.play().catch(()=>{});
+  const t0=performance.now();
+  fadeTimer=setInterval(()=>{
+    const p=Math.min((performance.now()-t0)/(FADE*1000),1);
+    from.volume=Math.max(0,1-p); to.volume=Math.min(1,p);
+    if(p>=1){ clearInterval(fadeTimer); fadeTimer=null; from.pause(); from.volume=1; act^=1; medIdx++; fading=false; updPMeta(); preloadNext(); syncPBtn(); }
+  },40);
+}
 function playSet(s){
   const id=idOf(s);
-  if(curPlay===id){ audio.paused?audio.play():audio.pause(); return; }
+  if(curPlay===id){ if(A().paused){A().play();} else {stopFade();AP.forEach(a=>a.pause());} syncPBtn(); return; }
   const clips=clipsOf(s); if(!clips.length) return;
-  curPlay=id; curSet=s; medley=clips;
+  stopFade(); AP.forEach(a=>{a.pause();a.volume=1;});
+  curPlay=id; curSet=s; medley=clips; act=0; medIdx=0;
   $('#player').classList.add('show'); document.documentElement.style.setProperty('--player-h','58px');
-  playClip(0); syncPBtn(); render();
+  startClip(0); render();
 }
-function syncPBtn(){ $('#pbtn').textContent=audio.paused?'▶':'❚❚'; document.querySelectorAll('.btn.play').forEach(b=>b.classList.toggle('playing', b.dataset.id===curPlay && !audio.paused)); }
-audio.addEventListener('play',syncPBtn); audio.addEventListener('pause',syncPBtn);
-audio.addEventListener('timeupdate',()=>{
-  const multi=medley.length>1;
-  const total = multi ? medley.length*CLIP : (audio.duration||30);
-  const elapsed = multi ? (medIdx*CLIP + Math.min(audio.currentTime,CLIP)) : audio.currentTime;
+function syncPBtn(){ $('#pbtn').textContent=A().paused?'▶':'❚❚'; document.querySelectorAll('.btn.play').forEach(b=>b.classList.toggle('playing', isPlaying(b.dataset.id))); }
+function onTime(e){
+  if(e.target!==A()) return;
+  const a=A(), multi=medley.length>1;
+  const total = multi ? medley.length*CLIP : (a.duration||30);
+  const elapsed = multi ? (medIdx*CLIP + Math.min(a.currentTime,CLIP)) : a.currentTime;
   $('#pfill').style.width = (total?Math.min(elapsed/total,1)*100:0)+'%';
-  if(multi && audio.currentTime>=CLIP){ if(medIdx<medley.length-1) playClip(medIdx+1); else audio.pause(); }
-});
-audio.addEventListener('ended',()=>{
-  if(medley.length>1 && medIdx<medley.length-1){ playClip(medIdx+1); return; }
-  $('#pfill').style.width='0%'; syncPBtn();
-});
-$('#pbtn').onclick=()=>{audio.paused?audio.play():audio.pause();};
-$('#pclose').onclick=()=>{audio.pause();$('#player').classList.remove('show');document.documentElement.style.setProperty('--player-h','0px');curPlay=null;curSet=null;medley=[];render();};
+  if(multi){
+    if(medIdx<medley.length-1 && a.currentTime>=CLIP-FADE) crossfade();
+    else if(medIdx===medley.length-1 && a.currentTime>=CLIP) a.pause();
+  }
+}
+function onEnd(e){
+  if(e.target!==A()) return;
+  if(medley.length>1 && medIdx<medley.length-1 && !fading){ act^=1; startClip(medIdx+1); }
+  else { $('#pfill').style.width='0%'; syncPBtn(); }
+}
+AP.forEach(a=>{ a.addEventListener('timeupdate',onTime); a.addEventListener('ended',onEnd); a.addEventListener('play',syncPBtn); a.addEventListener('pause',syncPBtn); });
+$('#pbtn').onclick=()=>{ if(A().paused){A().play();} else {stopFade();AP.forEach(a=>a.pause());} syncPBtn(); };
+$('#pclose').onclick=()=>{stopFade();AP.forEach(a=>{a.pause();a.volume=1;});$('#player').classList.remove('show');document.documentElement.style.setProperty('--player-h','0px');curPlay=null;curSet=null;medley=[];render();};
 
 function spotify(name){ return 'https://open.spotify.com/search/'+encodeURIComponent(name); }
 
@@ -436,7 +460,7 @@ function cardHTML(s){
       <div class="name">${esc(s.name)}</div>
       <div class="meta">${esc(s.genre||st.desc)}${s.note?(' · '+esc(s.note)):''}</div>
       <div class="actions">
-        <button class="btn play ${curPlay===id?'playing':''}" data-id="${id}" data-play="${id}" ${s.preview?'':'disabled'}><span class="gl">${curPlay===id&&!audio.paused?'❚❚':'▶'}</span> ${s.preview?'Smakprov':'Ingen'}</button>
+        <button class="btn play ${curPlay===id?'playing':''}" data-id="${id}" data-play="${id}" ${s.preview?'':'disabled'}><span class="gl">${isPlaying(id)?'❚❚':'▶'}</span> ${s.preview?'Smakprov':'Ingen'}</button>
         <a class="btn sp" href="${spotify(s.name)}" target="_blank" rel="noopener" aria-label="Öppna i Spotify">${SP_ICON}<span>Spotify</span></a>
       </div>
     </div>
